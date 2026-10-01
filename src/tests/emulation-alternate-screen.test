@@ -1,0 +1,80 @@
+#!/bin/sh
+
+#
+# This test checks that switching to the alternate screen (as
+# full-screen applications like vim do with DECSET 1049) and back
+# restores the original screen contents and cursor position, instead
+# of leaving the full-screen application's output behind.
+#
+
+# shellcheck source=e2e-test-subrs
+. "$(dirname "$0")/e2e-test-subrs"
+PATH=$PATH:.:$srcdir
+# Top-level wrapper.
+if [ $# -eq 0 ]; then
+    e2e-test "$0" baseline post
+    exit
+fi
+
+# OK, we have arguments, we're one of the test hooks.
+if [ $# -ne 1 ]; then
+    fail "bad arguments %s\n" "$@"
+fi
+
+baseline()
+{
+    # Clear
+    printf '\033[H\033[J'
+    # Some primary screen text
+    for i in $(seq 1 5); do
+	printf 'primary %s\n' "$i"
+    done
+    printf 'before'
+    # Enter the alternate screen, which should start out blank
+    printf '\033[?1049h'
+    printf 'alt-blank-check'
+    # Fill it with full-screen-app content
+    printf '\033[H'
+    for i in $(seq 1 24); do
+	printf '\033[%d;1Halternate %s' "$i" "$i"
+    done
+    # Leave the alternate screen; cursor should return after 'before'
+    printf '\033[?1049l'
+    printf ' after\n'
+
+    # Same again with mode 47, which does not save the cursor
+    printf '\0337\033[?47h'
+    printf '\033[Halternate 47'
+    printf '\033[?47l\0338'
+}
+
+post()
+{
+    local capture
+    capture="$(basename "$0").d/baseline.capture"
+    # No alternate screen content should remain
+    if grep -q 'alternate' "$capture"; then
+	exit 1
+    fi
+    if grep -q 'alt-blank-check' "$capture"; then
+	exit 1
+    fi
+    # All primary screen content should be restored
+    if [ "$(grep -c '^primary [1-5]$' "$capture")" -ne 5 ]; then
+	exit 1
+    fi
+    # Cursor should have been restored on leaving 1049
+    if ! grep -q '^before after$' "$capture"; then
+	exit 1
+    fi
+    exit 0
+}
+
+case $1 in
+    baseline)
+	baseline;;
+    post)
+	post;;
+    *)
+	fail "unknown test argument %s\n" "$1";;
+esac

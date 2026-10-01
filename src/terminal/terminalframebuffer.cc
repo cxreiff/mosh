@@ -74,7 +74,7 @@ DrawState::DrawState( int s_width, int s_height )
 
 Framebuffer::Framebuffer( int s_width, int s_height )
   : rows(), icon_name(), window_title(), clipboard(), bell_count( 0 ), title_initialized( false ),
-    ds( s_width, s_height )
+    alternate_screen( false ), saved_primary_rows(), ds( s_width, s_height )
 {
   assert( s_height > 0 );
   assert( s_width > 0 );
@@ -86,7 +86,7 @@ Framebuffer::Framebuffer( int s_width, int s_height )
 Framebuffer::Framebuffer( const Framebuffer& other )
   : rows( other.rows ), icon_name( other.icon_name ), window_title( other.window_title ),
     clipboard( other.clipboard ), bell_count( other.bell_count ), title_initialized( other.title_initialized ),
-    ds( other.ds )
+    alternate_screen( other.alternate_screen ), saved_primary_rows( other.saved_primary_rows ), ds( other.ds )
 {}
 
 Framebuffer& Framebuffer::operator=( const Framebuffer& other )
@@ -98,6 +98,8 @@ Framebuffer& Framebuffer::operator=( const Framebuffer& other )
     clipboard = other.clipboard;
     bell_count = other.bell_count;
     title_initialized = other.title_initialized;
+    alternate_screen = other.alternate_screen;
+    saved_primary_rows = other.saved_primary_rows;
     ds = other.ds;
   }
   return *this;
@@ -386,6 +388,8 @@ void Framebuffer::reset( void )
   int width = ds.get_width(), height = ds.get_height();
   ds = DrawState( width, height );
   rows = rows_type( height, newrow() );
+  alternate_screen = false;
+  saved_primary_rows.clear();
   window_title.clear();
   clipboard.clear();
   /* do not reset bell_count */
@@ -413,18 +417,44 @@ void Framebuffer::resize( int s_width, int s_height )
   int oldwidth = ds.get_width();
   ds.resize( s_width, s_height );
 
+  resize_rows( rows, oldwidth, oldheight, s_width, s_height );
+  if ( alternate_screen ) {
+    resize_rows( saved_primary_rows, oldwidth, oldheight, s_width, s_height );
+  }
+}
+
+void Framebuffer::resize_rows( rows_type& r, int oldwidth, int oldheight, int s_width, int s_height )
+{
   row_pointer blankrow( newrow() );
   if ( oldheight != s_height ) {
-    rows.resize( s_height, blankrow );
+    r.resize( s_height, blankrow );
   }
   if ( oldwidth == s_width ) {
     return;
   }
-  for ( rows_type::iterator i = rows.begin(); i != rows.end() && *i != blankrow; i++ ) {
+  for ( rows_type::iterator i = r.begin(); i != r.end() && *i != blankrow; i++ ) {
     *i = std::make_shared<Row>( **i );
     ( *i )->set_wrap( false );
     ( *i )->cells.resize( s_width, Cell( ds.get_background_rendition() ) );
   }
+}
+
+void Framebuffer::set_alternate_screen( bool alt )
+{
+  if ( alt == alternate_screen ) {
+    return;
+  }
+
+  if ( alt ) {
+    /* stash the primary screen and present a blank alternate screen */
+    saved_primary_rows = rows;
+    rows = rows_type( ds.get_height(), newrow() );
+  } else {
+    /* discard the alternate screen and bring back the primary one */
+    rows = saved_primary_rows;
+    saved_primary_rows.clear();
+  }
+  alternate_screen = alt;
 }
 
 void DrawState::resize( int s_width, int s_height )

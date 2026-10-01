@@ -432,12 +432,19 @@ private:
   unsigned int bell_count;
   bool title_initialized; /* true if the window title has been set via an OSC */
 
+  /* When the alternate screen is active, the primary screen's rows are
+     stashed here so they can be restored when the application exits it. */
+  bool alternate_screen;
+  rows_type saved_primary_rows;
+
   row_pointer newrow( void )
   {
     const size_t w = ds.get_width();
     const color_type c = ds.get_background_rendition();
     return std::make_shared<Row>( w, c );
   }
+
+  void resize_rows( rows_type& r, int oldwidth, int oldheight, int s_width, int s_height );
 
 public:
   Framebuffer( int s_width, int s_height );
@@ -504,6 +511,10 @@ public:
 
   void reset( void );
   void soft_reset( void );
+
+  /* switch between the primary and alternate screen (DEC modes 47, 1047, 1049) */
+  void set_alternate_screen( bool alt );
+  bool is_alternate_screen( void ) const { return alternate_screen; }
 
   void set_title_initialized( void ) { title_initialized = true; }
   bool is_title_initialized( void ) const { return title_initialized; }

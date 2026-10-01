@@ -340,12 +340,43 @@ static void set_if_available( bool* mode, bool value )
   }
 }
 
+/* alternate screen buffer (xterm modes 47, 1047, 1049) */
+static bool set_alternate_screen_mode( int param, Framebuffer* fb, bool value )
+{
+  switch ( param ) {
+    case 47:
+    case 1047:
+      fb->set_alternate_screen( value );
+      return true;
+    case 1049:
+      /* save cursor on entry, restore it on exit */
+      if ( value ) {
+        if ( !fb->is_alternate_screen() ) {
+          fb->ds.save_cursor();
+        }
+        fb->set_alternate_screen( true );
+        /* 1049 always starts with a cleared alternate screen */
+        for ( int y = 0; y < fb->ds.get_height(); y++ ) {
+          fb->reset_row( fb->get_mutable_row( y ) );
+        }
+      } else {
+        fb->set_alternate_screen( false );
+        fb->ds.restore_cursor();
+      }
+      return true;
+    default:
+      return false;
+  }
+}
+
 /* set private mode */
 static void CSI_DECSM( Framebuffer* fb, Dispatcher* dispatch )
 {
   for ( int i = 0; i < dispatch->param_count(); i++ ) {
     int param = dispatch->getparam( i, 0 );
-    if ( param == 9 || ( param >= 1000 && param <= 1003 ) ) {
+    if ( set_alternate_screen_mode( param, fb, true ) ) {
+      continue;
+    } else if ( param == 9 || ( param >= 1000 && param <= 1003 ) ) {
       fb->ds.mouse_reporting_mode = (Terminal::DrawState::MouseReportingMode)param;
     } else if ( param == 1005 || param == 1006 || param == 1015 ) {
       fb->ds.mouse_encoding_mode = (Terminal::DrawState::MouseEncodingMode)param;
@@ -360,7 +391,9 @@ static void CSI_DECRM( Framebuffer* fb, Dispatcher* dispatch )
 {
   for ( int i = 0; i < dispatch->param_count(); i++ ) {
     int param = dispatch->getparam( i, 0 );
-    if ( param == 9 || ( param >= 1000 && param <= 1003 ) ) {
+    if ( set_alternate_screen_mode( param, fb, false ) ) {
+      continue;
+    } else if ( param == 9 || ( param >= 1000 && param <= 1003 ) ) {
       fb->ds.mouse_reporting_mode = Terminal::DrawState::MOUSE_REPORTING_NONE;
     } else if ( param == 1005 || param == 1006 || param == 1015 ) {
       fb->ds.mouse_encoding_mode = Terminal::DrawState::MOUSE_ENCODING_DEFAULT;

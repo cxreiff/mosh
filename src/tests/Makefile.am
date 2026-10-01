@@ -15,6 +15,7 @@ displaytests = \
 	e2e-failure.test \
 	emulation-ascii-iso-8859.test \
 	emulation-80th-column.test \
+	emulation-alternate-screen.test \
 	emulation-attributes-vt100.test \
 	emulation-attributes-16color.test \
 	emulation-attributes-256color8.test \
