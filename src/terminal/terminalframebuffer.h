@@ -73,16 +73,6 @@ public:
     SIZE
   } attribute_type;
 
-  enum CursorStyle {
-    BLINKING_BLOCK = 0,
-    BLINKING_BLOCK_DEFAULT = 1,
-    STEADY_BLOCK = 2,
-    BLINKING_UNDERLINE = 3,
-    STEADY_UNDERLINE = 4,
-    BLINKING_BAR = 5,
-    STEADY_BAR = 6,
-  };
-
 private:
   static const uint64_t true_color_mask = 0x1000000;
   uint64_t foreground_color : 25;
@@ -410,7 +400,8 @@ public:
            && ( reverse_video == x.reverse_video ) && ( renditions == x.renditions )
            && ( bracketed_paste == x.bracketed_paste ) && ( mouse_reporting_mode == x.mouse_reporting_mode )
            && ( mouse_focus_event == x.mouse_focus_event ) && ( mouse_alternate_scroll == x.mouse_alternate_scroll )
-           && ( mouse_encoding_mode == x.mouse_encoding_mode ) && hyperlink == x.hyperlink;
+           && ( mouse_encoding_mode == x.mouse_encoding_mode ) && hyperlink == x.hyperlink
+           && ( cursor_style == x.cursor_style );
   }
 };
 

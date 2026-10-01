@@ -52,7 +52,7 @@ std::string Display::open() const
 
 std::string Display::close() const
 {
-  return std::string( "\033[?1l\033[0m\033[?25h"
+  return std::string( "\033[?1l\033[0m\033[?25h\033[0 q"
                       "\033[?1003l\033[?1002l\033[?1001l\033[?1000l"
                       "\033[?1015l\033[?1006l\033[?1005l" )
          + std::string( rmcup ? rmcup : "" );
@@ -489,8 +489,7 @@ bool Display::can_use_erase( const FrameState& frame ) const
 
 FrameState::FrameState( const Framebuffer& s_last )
   : str(), cursor_x( 0 ), cursor_y( 0 ), current_rendition( 0 ), current_hyperlink(),
-    cursor_visible( s_last.ds.cursor_visible ), last_frame( s_last ),
-    cursor_style( s_last.ds.cursor_style )
+    cursor_visible( s_last.ds.cursor_visible ), cursor_style( s_last.ds.cursor_style ), last_frame( s_last )
 {
   /* Preallocate for better performance.  Make a guess-- doesn't matter for correctness */
   str.reserve( last_frame.ds.get_width() * last_frame.ds.get_height() * 4 );
